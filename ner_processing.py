@@ -1,3 +1,4 @@
+# caution: last sentence should end with two blank lines.
 def conver_bio_to_bmes():
     """ convert BIO schema to BMES tagging schema"""
     input_file_path = 'test.txt'
