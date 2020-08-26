@@ -46,17 +46,17 @@ def build_blocks_from_md_file(md_file_path):
             if not line:
                 stack.append(LineBlock('empty'))
             elif line.startswith('######'):
-                stack.append(LineBlock('title6', line[6:].lstrip()))
+                stack.append(LineBlock('title6', line))
             elif line.startswith('#####'):
-                stack.append(LineBlock('title5', line[5:].lstrip()))
+                stack.append(LineBlock('title5', line))
             elif line.startswith('####'):
-                stack.append(LineBlock('title4', line[4:].lstrip()))
+                stack.append(LineBlock('title4', line))
             elif line.startswith('###'):
-                stack.append(LineBlock('title3', line[3:].lstrip()))
+                stack.append(LineBlock('title3', line))
             elif line.startswith('##'):
-                stack.append(LineBlock('title2', line[2:].lstrip()))
+                stack.append(LineBlock('title2', line))
             elif line.startswith('#'):
-                stack.append(LineBlock('title1', line[1:].lstrip()))
+                stack.append(LineBlock('title1', line))
             elif re.match(r'>.*', line):
                 stack.append(LineBlock('quote', re.findall(r'>(.*)', line)[0]))
             elif line.startswith('- '):
@@ -157,7 +157,7 @@ def generate_html(htmlblocks, attrs):
             s += '<p>' + ' '.join(block.contents) + '</p>'
         elif block.btype.startswith('title'):
             grade = block.btype[-1]
-            s += '<h' + str(grade) + '>' + block.contents[0] + '</h' + str(grade) + '>'
+            s += '<h' + str(grade) + '>' + block.contents[0][int(block.btype[-1]):].lstrip() + '</h' + str(grade) + '>'
         elif block.btype == 'quote':
             s += '<blockquote>'
             for item in block.contents:
@@ -187,11 +187,12 @@ def global_symbol_conversion_on_html(s):
     s = re.sub(r'\*(?P<center>[^\*]+)\*', r'<i>\g<center></i>', s)
     s = re.sub(r'!\[(?P<imgtext>[^\[\]\"]+)\]((?P<url>[^\(\)\[\]\"]+))', r'<img src="\g<url>" alt="\g<imgtext>"/>', s)
     s = re.sub(r'\[(?P<urltext>[^\[\]\"]+)\]\((?P<url>[^\(\)\[\]]+)\)', r'<a href="\g<url>">\g<urltext></a>', s)
+    s = re.sub(r'`(?P<text>[^`]+)`', r'<code>\g<text></code>', s)
     return s
 
 
 if __name__ == '__main__':
-    blog_title = '这是一篇自动生成的blog'
+    blog_title = '词向量和Word2Vec'
     update_time = 'time: {}'.format(time.strftime('%Y-%m-%d %H:%M:%S'))
     config = {
         "blog_title": blog_title,
@@ -200,9 +201,9 @@ if __name__ == '__main__':
         "index_page": "index.html"
     }
 
-    blocks = build_blocks_from_md_file('source.md')
+    blocks = build_blocks_from_md_file('b.md')
     smoothed_blocks = smooth_blocks(blocks)
     html_draft = generate_html(smoothed_blocks, config)
     html_code = global_symbol_conversion_on_html(html_draft)
-    with open('../oracle/public/blog/python/output.html', 'w', encoding='utf8') as fout:
+    with open('D:\\project\\oracle\\public\\blog\\nlp\\nlp-1-word2vec.html', 'w', encoding='utf8') as fout:
         fout.write(html_code)
