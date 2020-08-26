@@ -1,1 +1,11 @@
-go to [text preprocessing](https://flyangovoyang.github.io/natural_language_processing/text_processing.md) for more introductions.
+# description
+
+common text preprocessing in nlp.
+
+# features
+
+- [x] conversion from Complicated Chinese to Simple Chinese
+- [x] conversion from full wide symbol to half wide symbol
+- [x] conversion between different tagging schema in NER corpus
+- [ ] chinese and english word segmentation
+- [ ] ner metric calculation
