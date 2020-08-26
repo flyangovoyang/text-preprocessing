@@ -1,8 +1,7 @@
-# caution: last sentence should end with two blank lines.
-def conver_bio_to_bmes():
-    """ convert BIO schema to BMES tagging schema"""
-    input_file_path = 'test.txt'
-    output_file_path = 'test.data'
+# ner corpus preprocessing scripts
+
+def conver_bio_to_bmes(input_file_path, output_file_path):
+    """ convert BIO tagging schema to BMES tagging schema"""
     
     with open(output_file_path, 'w', encoding='utf8') as fout:
         sent = []
@@ -51,7 +50,10 @@ def conver_bio_to_bmes():
 
 
 def convert_horizontal_to_vertical(input_file_path, output_file_path):
-    """ notice split('####')[x] should be modified according the acutal circumstance """
+    """ convert horizontal style to vertical style 
+    horizontal style: a=B-PER b=I-PER c=O\n
+    vertical   style: a=B-PER\nb=I-PER\bc=I-PER\n\n
+    """
     with open(output_file_path, 'w', encoding='utf8') as fout:
         with open(input_file_path, 'r', encoding='utf8') as fin:
             for line in fin:
@@ -59,7 +61,7 @@ def convert_horizontal_to_vertical(input_file_path, output_file_path):
                 if not line:
                     continue
                 else:
-                    part = line.split('####')[2]
+                    part = line.split('####')[2]  # notice: 2 should be modified according to actual circumstance
                     pairs = part.split()
                     for pair in pairs:
                         ch = pair.split('=')[0]
