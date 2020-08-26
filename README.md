@@ -4,10 +4,10 @@ common text preprocessing in nlp.
 
 # features
 
-- 1. conversion from Complicated Chinese to Simple Chinese
-- 2. conversion from full width symbol to half width symbol
-- 3. conversion between different tagging schema in NER corpus
-- 4. **transform mardown file(.md) to html file(.html)**
+- conversion from Complicated Chinese to Simple Chinese
+- conversion from full width symbol to half width symbol
+- conversion between different tagging schema in NER corpus
+- **transform mardown file(.md) to html file(.html)**
 
 # future features
 
