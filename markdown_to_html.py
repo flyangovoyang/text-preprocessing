@@ -1,5 +1,6 @@
 import re
 import time
+from argparse import ArgumentParser
 
 
 class LineBlock:
@@ -37,36 +38,35 @@ class HtmlBlock:
             return '[{}: {}]'.format(self.btype, self.contents)
 
 
-def build_blocks_from_md_file(md_file_path):
+def build_blocks_from_md_file(lines):
     """ get line blocks from markdown file """
     stack = []
-    with open(md_file_path, 'r', encoding='utf8') as fin:
-        for line in fin:
-            line = line.rstrip()
-            if not line:
-                stack.append(LineBlock('empty'))
-            elif line.startswith('######'):
-                stack.append(LineBlock('title6', line))
-            elif line.startswith('#####'):
-                stack.append(LineBlock('title5', line))
-            elif line.startswith('####'):
-                stack.append(LineBlock('title4', line))
-            elif line.startswith('###'):
-                stack.append(LineBlock('title3', line))
-            elif line.startswith('##'):
-                stack.append(LineBlock('title2', line))
-            elif line.startswith('#'):
-                stack.append(LineBlock('title1', line))
-            elif re.match(r'>.*', line):
-                stack.append(LineBlock('quote', re.findall(r'>(.*)', line)[0]))
-            elif line.startswith('- '):
-                stack.append(LineBlock('ul', line[2:]))
-            elif line == '```':
-                stack.append(LineBlock('code_s_e'))
-            elif line.startswith('```'):
-                stack.append(LineBlock('code_s', line))
-            else:
-                stack.append(LineBlock('text', line))
+    for line in lines:
+        line = line.rstrip()
+        if not line:
+            stack.append(LineBlock('empty'))
+        elif line.startswith('######'):
+            stack.append(LineBlock('title6', line))
+        elif line.startswith('#####'):
+            stack.append(LineBlock('title5', line))
+        elif line.startswith('####'):
+            stack.append(LineBlock('title4', line))
+        elif line.startswith('###'):
+            stack.append(LineBlock('title3', line))
+        elif line.startswith('##'):
+            stack.append(LineBlock('title2', line))
+        elif line.startswith('#'):
+            stack.append(LineBlock('title1', line))
+        elif re.match(r'>.*', line):
+            stack.append(LineBlock('quote', re.findall(r'>(.*)', line)[0]))
+        elif line.startswith('- '):
+            stack.append(LineBlock('ul', line[2:]))
+        elif line == '```':
+            stack.append(LineBlock('code_s_e'))
+        elif line.startswith('```'):
+            stack.append(LineBlock('code_s', line))
+        else:
+            stack.append(LineBlock('text', line))
     return stack
 
 
@@ -119,6 +119,28 @@ def smooth_blocks(blocks):
     return after
 
 
+def local_text_decoration(smoothed_blocks):
+    # `x` => <code>x</code> 
+    # ==x== => <mark>x</mark>
+    # *x* => <i>x</i>
+    # **x** => <strong>x</strong>
+    # ![x](y) => <img src="y" alt="x">
+    # [x](y) => <a src="y">x</a>
+    # operation must be done in individual html blocks(except code html blocks, this is very important)
+    for i in range(len(smoothed_blocks)):
+        if smoothed_blocks[i].btype != 'code':
+            cxt = smoothed_blocks[i].contents
+            for j in range(len(cxt)):
+                cxt[j] = re.sub(r'`(?P<text>[^`]+)`', r'<code>\g<text></code>', cxt[j])
+                cxt[j] = re.sub(r'\*\*(?P<center>[^\*]+)\*\*', r'<strong>\g<center></strong>', cxt[j])
+                cxt[j] = re.sub(r'\*(?P<center>[^\*]+)\*', r'<i>\g<center></i>', cxt[j])
+                cxt[j] = re.sub(r'==(?P<text>[^`]+)==', r'<mark>\g<text></mark>', cxt[j])
+
+                cxt[j] = re.sub(r'!\[(?P<imgtext>[^\[\]\"]+)\]((?P<url>[^\(\)\[\]\"]+))', r'<img src="\g<url>" alt="\g<imgtext>"/>', cxt[j])
+                cxt[j] = re.sub(r'\[(?P<urltext>[^\[\]\"]+)\]\((?P<url>[^\(\)\[\]]+)\)', r'<a href="\g<url>">\g<urltext></a>', cxt[j])
+    return smoothed_blocks
+
+
 def generate_html(htmlblocks, attrs):
     """ generate html draft according to the html blocks """
     s = '''<!DOCTYPE html>
@@ -127,7 +149,7 @@ def generate_html(htmlblocks, attrs):
     <meta charset='utf-8'>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="../../css/bootstrap.min.css">
-    <link rel="stylesheet" href="../../css/''' + attrs['css_file'] + '''">
+    <link rel="stylesheet" href="''' + attrs['css_file'] + '''">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
     <!-- katex formular render engine -->
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js" integrity="sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4" crossorigin="anonymous"></script>
@@ -143,7 +165,7 @@ def generate_html(htmlblocks, attrs):
 <body>
     <div class="container">
         <div class="header">
-            <p><a href="../../''' + attrs['index_page'] + '''">< 返回首页</a></p>
+            <p><a href="''' + attrs['index_page'] + '''">< 返回首页</a></p>
         </div>
         <div class="text-center">
             <h1>''' + attrs['blog_title'] + '''</h1>
@@ -176,34 +198,40 @@ def generate_html(htmlblocks, attrs):
     return s
 
 
-def global_symbol_conversion_on_html(s):
-    """ change global symbol conversion on generated html draft
-    ** ** -> strong
-    * * -> i
-    []() -> <a>
-    ![]() -> <img>
-    """
-    s = re.sub(r'\*\*(?P<center>[^\*]+)\*\*', r'<strong>\g<center></strong>', s)
-    s = re.sub(r'\*(?P<center>[^\*]+)\*', r'<i>\g<center></i>', s)
-    s = re.sub(r'!\[(?P<imgtext>[^\[\]\"]+)\]((?P<url>[^\(\)\[\]\"]+))', r'<img src="\g<url>" alt="\g<imgtext>"/>', s)
-    s = re.sub(r'\[(?P<urltext>[^\[\]\"]+)\]\((?P<url>[^\(\)\[\]]+)\)', r'<a href="\g<url>">\g<urltext></a>', s)
-    s = re.sub(r'`(?P<text>[^`]+)`', r'<code>\g<text></code>', s)
-    return s
-
-
 if __name__ == '__main__':
-    blog_title = '词向量和Word2Vec'
+    parser = ArgumentParser()
+    parser.add_argument('--src', type=str, required=True, help='markdown file path')
+    parser.add_argument('--des', type=str, required=True, help='html file path')
+    parser.add_argument('--title', type=str, default="Title", help='blog title')
+    parser.add_argument('--css', type=str, default="../../common.css", help='css file path')
+    parser.add_argument('--parent_path', type=str, default='../../index.html', help='parent page path')
+
+    args = parser.parse_args()
     update_time = 'time: {}'.format(time.strftime('%Y-%m-%d %H:%M:%S'))
     config = {
-        "blog_title": blog_title,
+        "blog_title": args.title,
         "create_time": update_time,
-        "css_file": "common.css",
-        "index_page": "index.html"
+        "css_file": args.css,
+        "index_page": args.parent_path
     }
 
-    blocks = build_blocks_from_md_file('b.md')
+    # Global token replacement on YouDaoNotes markdown file
+    # this could be dangerous, but temporarily necessary
+    raw = open(args.src, 'r', encoding='utf8').read()
+    raw = raw.replace('`$', '$').replace('$`', '$')
+
+    while True:
+        start_index = raw.find('```math')
+        while start_index != -1:
+            end_index = raw.find('```', start_index+7)
+            raw = raw[:start_index] + '$$' + raw[start_index+7:end_index] + '$$' + raw[end_index+3:]
+            start_index = raw.find('```math')
+        break
+    
+    blocks = build_blocks_from_md_file(raw.split('\n'))
     smoothed_blocks = smooth_blocks(blocks)
-    html_draft = generate_html(smoothed_blocks, config)
-    html_code = global_symbol_conversion_on_html(html_draft)
-    with open('D:\\project\\oracle\\public\\blog\\nlp\\nlp-1-word2vec.html', 'w', encoding='utf8') as fout:
-        fout.write(html_code)
+    decorated_blocks = local_text_decoration(smoothed_blocks)
+
+    html_draft = generate_html(decorated_blocks, config)
+    with open(args.des, 'w', encoding='utf8') as fout:
+        fout.write(html_draft)
