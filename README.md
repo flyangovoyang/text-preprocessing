@@ -8,6 +8,7 @@ common text preprocessing in nlp.
 - conversion from full width symbol to half width symbol
 - conversion between different tagging schema in NER corpus
 - **transform mardown file(.md) to html file(.html)**
+- bpe algorithm
 
 # future features
 
